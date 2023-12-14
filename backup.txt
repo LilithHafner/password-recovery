@@ -1,0 +1,37 @@
+The data format is a base 64 encoded salt followed by a Fernet token.
+
+For example, it might look like this
+
+FLiD1U3uk4t8pGw9qlW5NtLci0Zb/SSQz0m3Ux2w9kU=gAAAAABle3mT3_jWoz77tpN_c8p1lJOrIXWuS-4NzB-7kJOZJLH3Lna90RGCIRfDHiv1XmhIxzQa0NDiPJCM0L9l7oIjBM6iFr3MJplx2qz2YoPSSfIydyc2Yc-PklMiJ8fbqz1ltJ06
+
+You can tell where the salt ends and the Fernet token begins by the = sign. It should be the 44th character (starting counting at 1). The = sign is part of the salt, not the Fernet token.
+
+Use the [Scrypt](https://en.wikipedia.org/wiki/Scrypt) algorithm as [implemented by the python cryptography library](https://cryptography.io/en/latest/hazmat/primitives/key-derivation-functions/#scrypt) to derive a key with parameters
+
+salt = <the salt contained in the data, decoded into bytes>,
+length = 32
+n = 2**21
+r = 8
+p = 1
+password = <your password, encoded in utf8>
+
+For example, if your password is "insecure backup key", and the salt is "FLiD1U3uk4t8pGw9qlW5NtLci0Zb/SSQz0m3Ux2w9kU=" then the derived key would be
+
+b'\x97\xdc`\x08\x97\x1dFC\x97\x05w\xe7\xd5\r\x12\xfcb\x06Z?\xc9h\xfa\xf7\x81\xe4\x9e\xf6\xae\xcb\xb1\x1b'
+
+or, equivalently, expressed in hexidecimal,
+
+0x97dc6008971d4643970577e7d50d12fc62065a3fc968faf781e49ef6aecbb11b
+
+Take this key, and use it to decode the Fernet token (everything after the "=" in the original data). The Python library "cryptography" requires the key to be encoded in base 64, so we use
+
+"l9xgCJcdRkOXBXfn1Q0S/GIGWj/JaPr3geSe9q7LsRs=" as a key and "gAAAAABle3mT3_jWoz77tpN_c8p1lJOrIXWuS-4NzB-7kJOZJLH3Lna90RGCIRfDHiv1XmhIxzQa0NDiPJCM0L9l7oIjBM6iFr3MJplx2qz2YoPSSfIydyc2Yc-PklMiJ8fbqz1ltJ06" as a Fernet token, giving an output of
+
+b'life\x00the universe and everything\x0042'
+
+This result is nul-delimited and implicitly broken up into triples. The first element of each tripple is a username, the last element is a password, and the middle element (if any) is the platform those credentials are for.
+
+Password hint:
+
+Use a bunch of space-concatenated words with no punctuation. "insecure backup key" is actually a decent key, just use something longer and less predictable like "astronautics oxalurate actinally hypomnesis reinflict circumambiently homoeopathician phony aspalathus gatecrashers"
+
